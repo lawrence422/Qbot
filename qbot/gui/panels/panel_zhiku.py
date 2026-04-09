@@ -1,6 +1,8 @@
 # -*- coding:utf-8 -*-
 
 import os
+import subprocess
+import sys
 
 import wx
 import wx.adv
@@ -54,7 +56,20 @@ class YanbaoPanel(wx.Panel):
 
     def init_reports_httpserver(self):
         if not check_port_in_use(port=9080):
-            os.popen(f"python -m http.server --directory {RESEARCH_REPORTS} 9080")
+            try:
+                # 使用 subprocess 启动 HTTP 服务器，避免 Python 3.12 Windows 编码问题
+                subprocess.Popen(
+                    [sys.executable, "-m", "http.server", "--directory", str(RESEARCH_REPORTS), "9080"],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+                )
+                logger.info("研报HTTP服务器已启动于端口 9080")
+            except Exception as e:
+                logger.error(f"启动HTTP服务器失败: {e}")
+                # 如果启动失败，使用远程服务器
+                self.reports_url = "http://111.229.117.200:9080/"
+                return
         self.reports_url = "http://localhost:9080/"
 
     def init_ui(self):
@@ -134,8 +149,17 @@ class NotebookPanel(wx.Panel):
         self.notebook_page.show_url(self.local_notebook_url)
 
     def start_online_notebook(self):
-        os.popen("jupyter notebook --no-browser --port 8800 ./docs/notebook")
-        self.iSNotebookActive = True
+        try:
+            subprocess.Popen(
+                [sys.executable, "-m", "jupyter", "notebook", "--no-browser", "--port", "8800", "./docs/notebook"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+            )
+            self.iSNotebookActive = True
+            logger.info("Jupyter Notebook 已启动于端口 8800")
+        except Exception as e:
+            logger.error(f"启动 Jupyter Notebook 失败: {e}")
 
     # def start_online_notebook(self):
     #     import re
